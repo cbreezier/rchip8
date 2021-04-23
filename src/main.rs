@@ -150,51 +150,53 @@ impl State {
     }
 
     fn execute_op(self: &mut State, display: &mut Display, op_code: OpCode) {
+        let vx = self.get_vx(&op_code);
+        let vy = self.get_vy(&op_code);
         match op_code.op {
             0u8 => {
                 match op_code.n {
                     0u8 => { // Clear screen
-                        println!("00E0");
+                        println!("00E0: Clear screen");
                         self.display = [[false; 32]; 64];
                         self.draw_canvas(display);
                     },
                     0xEu8 => { // Return
-                        println!("00EE");
                         self.pc = self.stack.pop().expect("Nothing on the stack to pop!");
+                        println!("00EE: Return to {}", self.pc);
                     },
                     _ => panic!("Unimplemented op {:?}", op_code),
                 }
             },
             0x1u8 => { // Jump
-                println!("00EE");
+                println!("00EE: Jump {}", op_code.nnn);
                 self.pc = op_code.nnn;
             },
             0x2u8 => { // Call
-                println!("2NNN");
+                println!("2NNN: Call {}", op_code.nnn);
                 self.stack.push(self.pc);
                 self.pc = op_code.nnn;
             },
             0x3u8 => { // Skip if vx == nn
-                println!("3XNN");
+                println!("3XNN: Skip if V{}({}) == NN({})", op_code.x, vx, op_code.nn);
                 if self.get_vx(&op_code) == op_code.nn {
                     self.pc += 2;
                 }
             },
             0x4u8 => { // Skip if vx != nn
-                println!("4XNN");
-                if self.get_vx(&op_code) != op_code.nn {
+                println!("4XNN: Skip if V{}({}) != NN({})", op_code.x, vx, op_code.nn);
+                if vx != op_code.nn {
                     self.pc += 2;
                 }
             },
             0x5u8 => { // Skip if vx == vy
-                println!("5XY0");
-                if self.get_vx(&op_code) == self.get_vy(&op_code) {
+                println!("5XY0: Skip if V{}({}) == V{}({})", op_code.x, vx, op_code.y, vy);
+                if vx == vy {
                     self.pc += 2;
                 }
             },
             0x9u8 => { // Skip if vx != vy
-                println!("9XY0");
-                if self.get_vx(&op_code) != self.get_vy(&op_code) {
+                println!("9XY0: Skip if V{}({}) != V{}({})", op_code.x, vx, op_code.y, vy);
+                if vx != vy {
                     self.pc += 2;
                 }
             },
@@ -203,7 +205,7 @@ impl State {
                 self.set_vx(&op_code, op_code.nn);
             },
             0x7u8 => { // Add
-                println!("7XNN: V{} += {}", op_code.x, op_code.nn);
+                println!("7XNN: V{}({}) += {}", op_code.x, vx, op_code.nn);
                 self.set_vx(&op_code, self.get_vx(&op_code) + op_code.nn);
             },
             0xAu8 => { // Set index
@@ -228,7 +230,6 @@ impl State {
                     }
 
                     let sprite = self.ram[usize::from(self.i + i)];
-                    println!("Got sprite {} from memory {}", sprite, self.i + i);
                     for col in 0..8 {
                         let x = start_x + col;
                         if x >= 64 {
@@ -236,7 +237,6 @@ impl State {
                         }
 
                         let new_pixel = (sprite & (1 << (7 - col))) != 0;
-                        println!("Drawing new pixel {} at {}, {}", new_pixel, x, y);
                         self.display[x][y] ^= new_pixel;
                     }
 
