@@ -235,7 +235,7 @@ impl State {
                             break;
                         }
 
-                        let new_pixel = (sprite & (1 << col)) != 0;
+                        let new_pixel = (sprite & (1 << (7 - col))) != 0;
                         println!("Drawing new pixel {} at {}, {}", new_pixel, x, y);
                         self.display[x][y] ^= new_pixel;
                     }
@@ -280,7 +280,7 @@ fn main() {
         // The rest of the game loop goes here...
         let op_code = state.next_op();
         state.execute_op(&mut display, op_code);
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 1)); // 1fps
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 2)); // 2fps
 
         // let mut input = String::new();
         // io::stdin()
