@@ -149,6 +149,10 @@ impl State {
         self.v[usize::from(op_code.y)] = value;
     }
 
+    fn set_carry(self: &mut State, value: bool) {
+        self.v[0xF] = if value { 1 } else { 0 };
+    }
+
     fn execute_op(self: &mut State, display: &mut Display, op_code: OpCode) {
         let vx = self.get_vx(&op_code);
         let vy = self.get_vy(&op_code);
@@ -178,7 +182,7 @@ impl State {
             },
             0x3u8 => { // Skip if vx == nn
                 println!("3XNN: Skip if V{}({}) == NN({})", op_code.x, vx, op_code.nn);
-                if self.get_vx(&op_code) == op_code.nn {
+                if vx == op_code.nn {
                     self.pc += 2;
                 }
             },
@@ -200,17 +204,71 @@ impl State {
                     self.pc += 2;
                 }
             },
-            0x6u8 => { // Set
+            0x6u8 => { // Set nn
                 println!("6XNN: V{} = {}", op_code.x, op_code.nn);
                 self.set_vx(&op_code, op_code.nn);
             },
-            0x7u8 => { // Add
+            0x7u8 => { // Add nn
                 println!("7XNN: V{}({}) += {}", op_code.x, vx, op_code.nn);
-                self.set_vx(&op_code, self.get_vx(&op_code) + op_code.nn);
+                self.set_vx(&op_code, vx.wrapping_add(op_code.nn));
+            },
+            0x8u8 => {
+                match op_code.n {
+                    0x0u8 => { // Set vy
+                        println!("8XN0: V{}({}) = V{}({})", op_code.x, vx, op_code.y, vy);
+                        self.set_vx(&op_code, vy);
+                    },
+                    0x1u8 => { // OR
+                        println!("8XN1: V{}({}) |= V{}({})", op_code.x, vx, op_code.y, vy);
+                        self.set_vx(&op_code, vx | vy);
+                    },
+                    0x2u8 => { // AND
+                        println!("8XN2: V{}({}) &= V{}({})", op_code.x, vx, op_code.y, vy);
+                        self.set_vx(&op_code, vx & vy);
+                    },
+                    0x3u8 => { // XOR
+                        println!("8XN3: V{}({}) ^= V{}({})", op_code.x, vx, op_code.y, vy);
+                        self.set_vx(&op_code, vx ^ vy);
+                    },
+                    0x4u8 => { // Add vy
+                        println!("8XN4: V{}({}) += V{}({})", op_code.x, vx, op_code.y, vy);
+                        self.set_vx(&op_code, vx.wrapping_add(vy));
+                        self.set_carry(self.get_vx(&op_code) < vx); // Overflowed
+                    },
+                    0x5u8 => { // Subtract vy
+                        println!("8XN5: V{}({}) -= V{}({})", op_code.x, vx, op_code.y, vy);
+                        self.set_vx(&op_code, vx.wrapping_sub(vy));
+                        self.set_carry(vx > vy);
+                    },
+                    0x7u8 => { // Subtract from vy
+                        println!("8XN7: V{}({}) = V{}({}) - VX", op_code.x, vx, op_code.y, vy);
+                        self.set_vx(&op_code, vy.wrapping_sub(vx));
+                        self.set_carry(vy > vx);
+                    },
+                    0x6u8 => { // Shift right
+                        println!("8XN6: V{}({}) = V{}({} >> 1)", op_code.x, vx, op_code.y, vy);
+                        self.set_vx(&op_code, vy >> 1);
+                        self.set_carry(vy & 0b00000001u8 != 0);
+                    },
+                    0xEu8 => { // Shift left
+                        println!("8XNE: V{}({}) = V{}({} << 1)", op_code.x, vx, op_code.y, vy);
+                        self.set_vx(&op_code, vy << 1);
+                        self.set_carry(vy & 0b10000000u8 != 0);
+                    },
+                    _ => panic!("Unimplemented op {:?}", op_code),
+                }
             },
             0xAu8 => { // Set index
                 println!("ANNN: I = {}", op_code.nnn);
                 self.i = op_code.nnn;
+            },
+            0xBu8 => { // Jump with offset
+                println!("BNNN: PC = NNN({}) + V0({})", op_code.nnn, self.v[0]);
+                self.pc = op_code.nnn + u16::from(self.v[0]);
+            },
+            0xCu8 => { // Random
+                println!("CXNN: Random & NN({})", op_code.nn);
+                self.set_vx(&op_code, 4u8 & op_code.nn); // TODO use better random number than 4
             },
             0xDu8 => { // Draw
                 let vx = self.get_vx(&op_code);
@@ -220,6 +278,8 @@ impl State {
                 // Drawing a sprite should wrap
                 let start_x = usize::from(vx) % 64;
                 let start_y = usize::from(vy) % 32;
+
+                self.set_carry(false);
 
                 // Draw a sprite n pixels high
                 let mut i = 0;
@@ -236,8 +296,10 @@ impl State {
                             break;
                         }
 
+                        let old_pixel = self.display[x][y];
                         let new_pixel = (sprite & (1 << (7 - col))) != 0;
-                        self.display[x][y] ^= new_pixel;
+                        self.display[x][y] = old_pixel ^ new_pixel;
+                        self.set_carry(old_pixel && new_pixel);
                     }
 
                     // Move onto the next sprite
@@ -280,7 +342,7 @@ fn main() {
         // The rest of the game loop goes here...
         let op_code = state.next_op();
         state.execute_op(&mut display, op_code);
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 2)); // 2fps
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 5)); // 5fps
 
         // let mut input = String::new();
         // io::stdin()
