@@ -10,7 +10,10 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+
 use std::time::Duration;
+
+use rand::Rng;
 
 #[derive(Debug)]
 struct OpCode {
@@ -268,6 +271,8 @@ impl State {
                         // println!("8XY6: V{}({}) = V{}({} >> 1)", op_code.x, vx, op_code.y, vy);
                         // self.set_vx(&op_code, vy >> 1);
                         // self.set_carry(vy & 0b00000001u8 != 0);
+
+                        // We use the "modern" implementation of these instructions
                         println!("8XY6: V{}({}) >>= 1", op_code.x, vx);
                         self.set_vx(&op_code, vx >> 1);
                         self.set_carry(vx & 0b00000001u8 != 0);
@@ -276,6 +281,8 @@ impl State {
                         // println!("8XYE: V{}({}) = V{}({} << 1)", op_code.x, vx, op_code.y, vy);
                         // self.set_vx(&op_code, vy << 1);
                         // self.set_carry(vy & 0b10000000u8 != 0);
+
+                        // We use the "modern" implementation of these instructions
                         println!("8XYE: V{}({}) <<= 1", op_code.x, vx);
                         self.set_vx(&op_code, vx << 1);
                         self.set_carry(vx & 0b10000000u8 != 0);
@@ -293,7 +300,8 @@ impl State {
             },
             0xCu8 => { // Random
                 println!("CXNN: Random & NN({})", op_code.nn);
-                self.set_vx(&op_code, 4u8 & op_code.nn); // TODO use better random number than 4
+                let random_value: u8 = rand::thread_rng().gen();
+                self.set_vx(&op_code, random_value & op_code.nn);
             },
             0xDu8 => { // Draw
                 let vx = self.get_vx(&op_code);
@@ -438,11 +446,6 @@ fn main() {
         // The rest of the game loop goes here...
         let op_code = state.next_op();
         state.execute_op(&mut display, op_code);
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 10)); // 10fps
-
-        // let mut input = String::new();
-        // io::stdin()
-        //     .read_line(&mut input)
-        //     .unwrap();
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60)); // 60fps
     }
 }
