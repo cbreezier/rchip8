@@ -46,7 +46,7 @@ impl Display {
                     let y = ((y as u32) * self.scale) as i32;
                     let width = self.scale;
                     let height = self.scale;
-                    self.canvas.draw_rect(Rect::new(
+                    self.canvas.fill_rect(Rect::new(
                         x,
                         y,
                         width,
