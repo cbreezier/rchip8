@@ -251,6 +251,7 @@ impl State {
                 let start_y = usize::from(vy) % 32;
 
                 self.set_carry(false);
+                let mut did_collide = false;
 
                 // Draw a sprite n pixels high
                 let mut i = 0;
@@ -270,12 +271,14 @@ impl State {
                         let old_pixel = self.display[x][y];
                         let new_pixel = (sprite & (1 << (7 - col))) != 0;
                         self.display[x][y] = old_pixel ^ new_pixel;
-                        self.set_carry(old_pixel && new_pixel);
+                        did_collide = did_collide || (old_pixel && new_pixel);
                     }
 
                     // Move onto the next sprite
                     i += 1;
                 }
+
+                self.set_carry(did_collide);
             },
             0xEu8 => { // Skip if key
                 match op_code.nn {
