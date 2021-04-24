@@ -58,6 +58,16 @@ fn main() {
                 Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     break 'running
                 },
+                Event::KeyDown { keycode: Some(keycode), .. } => {
+                    if let Some(key_index) = keycode_to_index(keycode) {
+                        state.key_down(key_index);
+                    }
+                },
+                Event::KeyUp { keycode: Some(keycode), .. } => {
+                    if let Some(key_index) = keycode_to_index(keycode) {
+                        state.key_up(key_index);
+                    }
+                },
                 _ => {}
             }
         }
@@ -89,5 +99,31 @@ fn main() {
             }
         }
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60)); // 60fps
+    }
+}
+
+fn keycode_to_index(keycode: Keycode) -> Option<usize> {
+    return match keycode {
+        Keycode::Num1 => Some(0),
+        Keycode::Num2 => Some(1),
+        Keycode::Num3 => Some(2),
+        Keycode::Num4 => Some(3),
+
+        Keycode::Q => Some(4),
+        Keycode::W => Some(5),
+        Keycode::E => Some(6),
+        Keycode::R => Some(7),
+
+        Keycode::A => Some(8),
+        Keycode::S => Some(9),
+        Keycode::D => Some(10),
+        Keycode::F => Some(11),
+
+        Keycode::Z => Some(12),
+        Keycode::X => Some(13),
+        Keycode::C => Some(14),
+        Keycode::V => Some(15),
+
+        _ => Option::None,
     }
 }

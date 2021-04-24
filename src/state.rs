@@ -18,6 +18,7 @@ pub struct State {
     delay_timer: u8,
     sound_timer: u8,
     v: [u8; 16],
+    keypad: [bool; 16],
 }
 
 impl State {
@@ -31,6 +32,7 @@ impl State {
             delay_timer: 0,
             sound_timer: 0,
             v: [0; 16],
+            keypad: [false; 16],
         };
 
         let fonts = [
@@ -102,6 +104,14 @@ impl State {
         if self.sound_timer > 0 {
             self.sound_timer -= 1;
         }
+    }
+
+    pub fn key_down(&mut self, key: usize) {
+        self.keypad[key] = true;
+    }
+
+    pub fn key_up(&mut self, key: usize) {
+        self.keypad[key] = false;
     }
 
     pub fn execute_op(self: &mut State, op_code: OpCode) {
@@ -264,7 +274,6 @@ impl State {
                     }
 
                     // Move onto the next sprite
-                    // TODO should we modify self.i?
                     i += 1;
                 }
             },
@@ -272,11 +281,15 @@ impl State {
                 match op_code.nn {
                     0x9Eu8 => {
                         debug!("EX9E: Skip if key V{}({})", op_code.x, vx);
-                        // TODO
+                        if vx < 16 && self.keypad[usize::from(vx)] {
+                            self.pc += 2;
+                        }
                     },
                     0xA1u8 => {
                         debug!("EX9E: Skip if not key V{}({})", op_code.x, vx);
-                        // TODO
+                        if vx < 16 && !self.keypad[usize::from(vx)] {
+                            self.pc += 2;
+                        }
                     },
                     _ => panic!("Unimplemented op {:?}", op_code),
                 }
@@ -301,7 +314,23 @@ impl State {
                     },
                     0x0Au8 => {
                         debug!("FX0A: Get key");
-                        // TODO
+                        // We stray a bit from original implementation
+                        // Rather than waiting for a keyup or even waiting for a keydown
+                        // we accept even currently-held keys :fingerscrossed:
+                        // This does mean that we have implicit priority when multiple
+                        // keys are held
+                        let mut is_pressed = false;
+                        for (i, key) in self.keypad.iter().enumerate() {
+                            if *key {
+                                self.set_vx(&op_code, i as u8);
+                                is_pressed = true;
+                                break;
+                            }
+                        }
+
+                        if !is_pressed {
+                            self.pc -= 2; // Effectively "pause" execution
+                        }
                     },
                     0x29u8 => {
                         debug!("FX29: Font at V{}({})", op_code.x, vx);
