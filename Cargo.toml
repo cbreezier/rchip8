@@ -1,7 +1,7 @@
 [package]
-name = "chip-8-rust"
+name = "rchip8"
 version = "0.1.0"
-authors = ["Leo Huang <leo.h@wbstech.com.au>"]
+authors = ["Leo Huang <leo.tx.huang@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
