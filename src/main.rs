@@ -5,14 +5,21 @@ use sdl2::keyboard::Keycode;
 
 use std::env;
 use std::fs;
+use std::time::Instant;
 use std::time::Duration;
 
 use crate::display::Display;
 use crate::state::State;
+use crate::timing::{Timing, TimedSystem};
 
 mod op_code;
 mod display;
 mod state;
+mod timing;
+
+const CPU_SYSTEM: &str = "cpu";
+const TIMER_SYSTEM: &str = "timer";
+const DISPLAY_SYSTEM: &str = "display";
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -27,6 +34,16 @@ fn main() {
     let mut state = State::new();
     state.load_rom(rom_file);
 
+    // Init our timing contoller
+    let mut timing = Timing::new(
+        Instant::now(),
+        vec![
+            TimedSystem::new(CPU_SYSTEM, 700),
+            TimedSystem::new(TIMER_SYSTEM, 60),
+            TimedSystem::new(DISPLAY_SYSTEM, 60),
+        ],
+    );
+
     let mut event_pump = sdl_context.event_pump().unwrap();
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -40,8 +57,31 @@ fn main() {
         }
 
         // The rest of the game loop goes here...
-        let op_code = state.next_op();
-        state.execute_op(&mut display, op_code);
+        let instructions = timing.get_instructions(Instant::now());
+        for instruction in instructions {
+            match instruction.name {
+                CPU_SYSTEM => {
+                    println!("=== Running cpu for {} cycles", instruction.cycles);
+                    for _ in 0..instruction.cycles {
+                        let op_code = state.next_op();
+                        state.execute_op(op_code);
+                    }
+                },
+                TIMER_SYSTEM => {
+                    println!("=== Running timer for {} cycles", instruction.cycles);
+                    for _ in 0..instruction.cycles {
+                        state.decrement_timers();
+                    }
+                },
+                DISPLAY_SYSTEM => {
+                    println!("=== Running display for {} cycles", instruction.cycles);
+                    for _ in 0..instruction.cycles {
+                        display.draw_canvas(state.get_frame_buffer());
+                    }
+                },
+                unknown => panic!("Unexpected instruction {}", unknown),
+            }
+        }
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60)); // 60fps
     }
 }

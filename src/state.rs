@@ -1,6 +1,5 @@
 use rand::Rng;
 
-use crate::display::Display;
 use crate::op_code::OpCode;
 
 #[derive(Debug)]
@@ -70,6 +69,10 @@ impl State {
         return next_op;
     }
 
+    pub fn get_frame_buffer(&self) -> &[[bool; 32]; 64] {
+        return &self.display;
+    }
+
     pub fn get_vx(self: &State, op_code: &OpCode) -> u8 {
         return self.v[usize::from(op_code.x)];
     }
@@ -86,7 +89,16 @@ impl State {
         self.v[0xF] = if value { 1 } else { 0 };
     }
 
-    pub fn execute_op(self: &mut State, display: &mut Display, op_code: OpCode) {
+    pub fn decrement_timers(&mut self) {
+        if self.delay_timer > 0 {
+            self.delay_timer -= 1;
+        }
+        if self.sound_timer > 0 {
+            self.sound_timer -= 1;
+        }
+    }
+
+    pub fn execute_op(self: &mut State, op_code: OpCode) {
         let vx = self.get_vx(&op_code);
         let vy = self.get_vy(&op_code);
         match op_code.op {
@@ -95,7 +107,6 @@ impl State {
                     0u8 => { // Clear screen
                         println!("00E0: Clear screen");
                         self.display = [[false; 32]; 64];
-                        display.draw_canvas(&self.display);
                     },
                     0xEu8 => { // Return
                         self.pc = self.stack.pop().expect("Nothing on the stack to pop!");
@@ -250,8 +261,6 @@ impl State {
                     // TODO should we modify self.i?
                     i += 1;
                 }
-
-                display.draw_canvas(&self.display);
             },
             0xEu8 => { // Skip if key
                 match op_code.nn {
