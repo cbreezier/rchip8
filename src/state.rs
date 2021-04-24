@@ -2,6 +2,12 @@ use rand::Rng;
 
 use crate::op_code::OpCode;
 
+macro_rules! debug {
+    ($( $args:expr ),*) => {
+        // debug!( $( $args ),* );
+    }
+}
+
 #[derive(Debug)]
 pub struct State {
     display: [[bool; 32]; 64],
@@ -105,107 +111,107 @@ impl State {
             0u8 => {
                 match op_code.n {
                     0u8 => { // Clear screen
-                        println!("00E0: Clear screen");
+                        debug!("00E0: Clear screen");
                         self.display = [[false; 32]; 64];
                     },
                     0xEu8 => { // Return
                         self.pc = self.stack.pop().expect("Nothing on the stack to pop!");
-                        println!("00EE: Return to {}", self.pc);
+                        debug!("00EE: Return to {}", self.pc);
                     },
                     _ => panic!("Unimplemented op {:?}", op_code),
                 }
             },
             0x1u8 => { // Jump
-                println!("00EE: Jump {}", op_code.nnn);
+                debug!("00EE: Jump {}", op_code.nnn);
                 self.pc = op_code.nnn;
             },
             0x2u8 => { // Call
-                println!("2NNN: Call {}", op_code.nnn);
+                debug!("2NNN: Call {}", op_code.nnn);
                 self.stack.push(self.pc);
                 self.pc = op_code.nnn;
             },
             0x3u8 => { // Skip if vx == nn
-                println!("3XNN: Skip if V{}({}) == NN({})", op_code.x, vx, op_code.nn);
+                debug!("3XNN: Skip if V{}({}) == NN({})", op_code.x, vx, op_code.nn);
                 if vx == op_code.nn {
                     self.pc += 2;
                 }
             },
             0x4u8 => { // Skip if vx != nn
-                println!("4XNN: Skip if V{}({}) != NN({})", op_code.x, vx, op_code.nn);
+                debug!("4XNN: Skip if V{}({}) != NN({})", op_code.x, vx, op_code.nn);
                 if vx != op_code.nn {
                     self.pc += 2;
                 }
             },
             0x5u8 => { // Skip if vx == vy
-                println!("5XY0: Skip if V{}({}) == V{}({})", op_code.x, vx, op_code.y, vy);
+                debug!("5XY0: Skip if V{}({}) == V{}({})", op_code.x, vx, op_code.y, vy);
                 if vx == vy {
                     self.pc += 2;
                 }
             },
             0x9u8 => { // Skip if vx != vy
-                println!("9XY0: Skip if V{}({}) != V{}({})", op_code.x, vx, op_code.y, vy);
+                debug!("9XY0: Skip if V{}({}) != V{}({})", op_code.x, vx, op_code.y, vy);
                 if vx != vy {
                     self.pc += 2;
                 }
             },
             0x6u8 => { // Set nn
-                println!("6XNN: V{} = {}", op_code.x, op_code.nn);
+                debug!("6XNN: V{} = {}", op_code.x, op_code.nn);
                 self.set_vx(&op_code, op_code.nn);
             },
             0x7u8 => { // Add nn
-                println!("7XNN: V{}({}) += {}", op_code.x, vx, op_code.nn);
+                debug!("7XNN: V{}({}) += {}", op_code.x, vx, op_code.nn);
                 self.set_vx(&op_code, vx.wrapping_add(op_code.nn));
             },
             0x8u8 => {
                 match op_code.n {
                     0x0u8 => { // Set vy
-                        println!("8XY0: V{}({}) = V{}({})", op_code.x, vx, op_code.y, vy);
+                        debug!("8XY0: V{}({}) = V{}({})", op_code.x, vx, op_code.y, vy);
                         self.set_vx(&op_code, vy);
                     },
                     0x1u8 => { // OR
-                        println!("8XY1: V{}({}) |= V{}({})", op_code.x, vx, op_code.y, vy);
+                        debug!("8XY1: V{}({}) |= V{}({})", op_code.x, vx, op_code.y, vy);
                         self.set_vx(&op_code, vx | vy);
                     },
                     0x2u8 => { // AND
-                        println!("8XY2: V{}({}) &= V{}({})", op_code.x, vx, op_code.y, vy);
+                        debug!("8XY2: V{}({}) &= V{}({})", op_code.x, vx, op_code.y, vy);
                         self.set_vx(&op_code, vx & vy);
                     },
                     0x3u8 => { // XOR
-                        println!("8XY3: V{}({}) ^= V{}({})", op_code.x, vx, op_code.y, vy);
+                        debug!("8XY3: V{}({}) ^= V{}({})", op_code.x, vx, op_code.y, vy);
                         self.set_vx(&op_code, vx ^ vy);
                     },
                     0x4u8 => { // Add vy
-                        println!("8XY4: V{}({}) += V{}({})", op_code.x, vx, op_code.y, vy);
+                        debug!("8XY4: V{}({}) += V{}({})", op_code.x, vx, op_code.y, vy);
                         self.set_vx(&op_code, vx.wrapping_add(vy));
                         self.set_carry(self.get_vx(&op_code) < vx); // Overflowed
                     },
                     0x5u8 => { // Subtract vy
-                        println!("8XY5: V{}({}) -= V{}({})", op_code.x, vx, op_code.y, vy);
+                        debug!("8XY5: V{}({}) -= V{}({})", op_code.x, vx, op_code.y, vy);
                         self.set_vx(&op_code, vx.wrapping_sub(vy));
                         self.set_carry(vx > vy);
                     },
                     0x7u8 => { // Subtract from vy
-                        println!("8XY7: V{}({}) = V{}({}) - VX", op_code.x, vx, op_code.y, vy);
+                        debug!("8XY7: V{}({}) = V{}({}) - VX", op_code.x, vx, op_code.y, vy);
                         self.set_vx(&op_code, vy.wrapping_sub(vx));
                         self.set_carry(vy > vx);
                     },
                     0x6u8 => { // Shift right
-                        // println!("8XY6: V{}({}) = V{}({} >> 1)", op_code.x, vx, op_code.y, vy);
+                        // debug!("8XY6: V{}({}) = V{}({} >> 1)", op_code.x, vx, op_code.y, vy);
                         // self.set_vx(&op_code, vy >> 1);
                         // self.set_carry(vy & 0b00000001u8 != 0);
 
                         // We use the "modern" implementation of these instructions
-                        println!("8XY6: V{}({}) >>= 1", op_code.x, vx);
+                        debug!("8XY6: V{}({}) >>= 1", op_code.x, vx);
                         self.set_vx(&op_code, vx >> 1);
                         self.set_carry(vx & 0b00000001u8 != 0);
                     },
                     0xEu8 => { // Shift left
-                        // println!("8XYE: V{}({}) = V{}({} << 1)", op_code.x, vx, op_code.y, vy);
+                        // debug!("8XYE: V{}({}) = V{}({} << 1)", op_code.x, vx, op_code.y, vy);
                         // self.set_vx(&op_code, vy << 1);
                         // self.set_carry(vy & 0b10000000u8 != 0);
 
                         // We use the "modern" implementation of these instructions
-                        println!("8XYE: V{}({}) <<= 1", op_code.x, vx);
+                        debug!("8XYE: V{}({}) <<= 1", op_code.x, vx);
                         self.set_vx(&op_code, vx << 1);
                         self.set_carry(vx & 0b10000000u8 != 0);
                     },
@@ -213,22 +219,22 @@ impl State {
                 }
             },
             0xAu8 => { // Set index
-                println!("ANNN: I = {}", op_code.nnn);
+                debug!("ANNN: I = {}", op_code.nnn);
                 self.i = op_code.nnn;
             },
             0xBu8 => { // Jump with offset
-                println!("BNNN: PC = NNN({}) + V0({})", op_code.nnn, self.v[0]);
+                debug!("BNNN: PC = NNN({}) + V0({})", op_code.nnn, self.v[0]);
                 self.pc = op_code.nnn + u16::from(self.v[0]);
             },
             0xCu8 => { // Random
-                println!("CXNN: Random & NN({})", op_code.nn);
+                debug!("CXNN: Random & NN({})", op_code.nn);
                 let random_value: u8 = rand::thread_rng().gen();
                 self.set_vx(&op_code, random_value & op_code.nn);
             },
             0xDu8 => { // Draw
                 let vx = self.get_vx(&op_code);
                 let vy = self.get_vy(&op_code);
-                println!("DXYN: {} height sprite at {}, {}", op_code.n, vx, vy);
+                debug!("DXYN: {} height sprite at {}, {}", op_code.n, vx, vy);
 
                 // Drawing a sprite should wrap
                 let start_x = usize::from(vx) % 64;
@@ -265,11 +271,11 @@ impl State {
             0xEu8 => { // Skip if key
                 match op_code.nn {
                     0x9Eu8 => {
-                        println!("EX9E: Skip if key V{}({})", op_code.x, vx);
+                        debug!("EX9E: Skip if key V{}({})", op_code.x, vx);
                         // TODO
                     },
                     0xA1u8 => {
-                        println!("EX9E: Skip if not key V{}({})", op_code.x, vx);
+                        debug!("EX9E: Skip if not key V{}({})", op_code.x, vx);
                         // TODO
                     },
                     _ => panic!("Unimplemented op {:?}", op_code),
@@ -278,32 +284,32 @@ impl State {
             0xFu8 => {
                 match op_code.nn {
                     0x07u8 => {
-                        println!("FX07: V{} = delay timer({})", op_code.x, self.delay_timer);
+                        debug!("FX07: V{} = delay timer({})", op_code.x, self.delay_timer);
                         self.set_vx(&op_code, self.delay_timer);
                     },
                     0x15u8 => {
-                        println!("FX15: delay timer = V{}({})", op_code.x, vx);
+                        debug!("FX15: delay timer = V{}({})", op_code.x, vx);
                         self.delay_timer = vx;
                     },
                     0x18u8 => {
-                        println!("FX18: sound timer = V{}({})", op_code.x, vx);
+                        debug!("FX18: sound timer = V{}({})", op_code.x, vx);
                         self.sound_timer = vx;
                     },
                     0x1Eu8 => {
-                        println!("FX1E: I += V{}({})", op_code.x, vx);
+                        debug!("FX1E: I += V{}({})", op_code.x, vx);
                         self.i += u16::from(vx);
                     },
                     0x0Au8 => {
-                        println!("FX0A: Get key");
+                        debug!("FX0A: Get key");
                         // TODO
                     },
                     0x29u8 => {
-                        println!("FX29: Font at V{}({})", op_code.x, vx);
+                        debug!("FX29: Font at V{}({})", op_code.x, vx);
                         let character = vx & 0xF;
                         self.i = 0x50u16 + (5u16 * u16::from(character));
                     },
                     0x33u8 => {
-                        println!("FX33: Decimal font of V{}({})", op_code.x, vx);
+                        debug!("FX33: Decimal font of V{}({})", op_code.x, vx);
                         let digit3 = vx % 10;
                         let digit2 = (vx % 100) / 10;
                         let digit1 = vx / 100;
@@ -313,21 +319,21 @@ impl State {
                         self.ram[usize::from(self.i + 2)] = digit3;
                     },
                     0x55u8 => {
-                        println!("FX55: Store V0..V{} to I", op_code.x);
+                        debug!("FX55: Store V0..V{} to I", op_code.x);
                         for i in 0..usize::from(op_code.x + 1) {
                             self.ram[usize::from(self.i) + i] = self.v[i];
                         }
-                        for i in 0..usize::from(op_code.x + 1) {
-                            println!("    Ram at {} is now {}", usize::from(self.i) + i, self.ram[usize::from(self.i) + i]);
+                        for _i in 0..usize::from(op_code.x + 1) {
+                            debug!("    Ram at {} is now {}", usize::from(self.i) + _i, self.ram[usize::from(self.i) + _i]);
                         }
                     },
                     0x65u8 => {
-                        println!("FX65: Load V0..V{} from I", op_code.x);
+                        debug!("FX65: Load V0..V{} from I", op_code.x);
                         for i in 0..usize::from(op_code.x + 1) {
                             self.v[i] = self.ram[usize::from(self.i) + i];
                         }
-                        for i in 0..usize::from(op_code.x + 1) {
-                            println!("    Loaded {} into V{}", self.v[i], i);
+                        for _i in 0..usize::from(op_code.x + 1) {
+                            debug!("    Loaded {} into V{}", self.v[_i], _i);
                         }
                     },
                     _ => panic!("Unimplemented op {:?}", op_code),

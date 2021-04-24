@@ -1,6 +1,12 @@
 use std::time::Instant;
 use std::vec::Vec;
 
+macro_rules! debug {
+    ($( $args:expr ),*) => {
+        // println!( $( $args ),* );
+    }
+}
+
 pub struct TimedSystem {
     name: &'static str,
     cycle_duration_nanos: u64,
@@ -75,8 +81,8 @@ impl Timing {
             self.systems
                 .sort_by(|a, b| a.next_cycle_nanos().cmp(&b.next_cycle_nanos()));
 
-            for system in &self.systems {
-                println!("Sorted {} at cycle {}", system.name, system.next_cycle_nanos());
+            for _system in &self.systems {
+                debug!("Sorted {} at cycle {}", _system.name, _system.next_cycle_nanos());
             }
 
             let soonest_nanos = self.systems[0].next_cycle_nanos();
@@ -93,7 +99,7 @@ impl Timing {
             let num_cycles = self.systems[0].num_cycles_until(next_soonest_nanos);
 
             // Add it to our results
-            println!("Adding instruction {} for {} cycles", self.systems[0].name, num_cycles);
+            debug!("Adding instruction {} for {} cycles", self.systems[0].name, num_cycles);
             results.push(Instruction {
                 name: self.systems[0].name.clone(),
                 cycles: num_cycles,
@@ -103,7 +109,7 @@ impl Timing {
             self.systems[0].elapsed_cycles += num_cycles;
         }
 
-        println!("--- Emitted {} instructions", results.len());
+        debug!("--- Emitted {} instructions", results.len());
         return results;
     }
 }

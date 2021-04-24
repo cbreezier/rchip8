@@ -5,12 +5,12 @@ use sdl2::keyboard::Keycode;
 
 use std::env;
 use std::fs;
-use std::time::Instant;
 use std::time::Duration;
+use std::time::Instant;
 
 use crate::display::Display;
 use crate::state::State;
-use crate::timing::{Timing, TimedSystem};
+use crate::timing::{TimedSystem, Timing};
 
 mod op_code;
 mod display;
@@ -20,6 +20,12 @@ mod timing;
 const CPU_SYSTEM: &str = "cpu";
 const TIMER_SYSTEM: &str = "timer";
 const DISPLAY_SYSTEM: &str = "display";
+
+macro_rules! debug {
+    ($( $args:expr ),*) => {
+        // println!( $( $args ),* );
+    }
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -61,20 +67,20 @@ fn main() {
         for instruction in instructions {
             match instruction.name {
                 CPU_SYSTEM => {
-                    println!("=== Running cpu for {} cycles", instruction.cycles);
+                    debug!("=== Running cpu for {} cycles", instruction.cycles);
                     for _ in 0..instruction.cycles {
                         let op_code = state.next_op();
                         state.execute_op(op_code);
                     }
                 },
                 TIMER_SYSTEM => {
-                    println!("=== Running timer for {} cycles", instruction.cycles);
+                    debug!("=== Running timer for {} cycles", instruction.cycles);
                     for _ in 0..instruction.cycles {
                         state.decrement_timers();
                     }
                 },
                 DISPLAY_SYSTEM => {
-                    println!("=== Running display for {} cycles", instruction.cycles);
+                    debug!("=== Running display for {} cycles", instruction.cycles);
                     for _ in 0..instruction.cycles {
                         display.draw_canvas(state.get_frame_buffer());
                     }
