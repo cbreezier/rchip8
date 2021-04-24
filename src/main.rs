@@ -309,6 +309,71 @@ impl State {
 
                 self.draw_canvas(display);
             },
+            0xEu8 => { // Skip if key
+                match op_code.nn {
+                    0x9Eu8 => {
+                        println!("EX9E: Skip if key V{}({})", op_code.x, vx);
+                        // TODO
+                    },
+                    0xA1u8 => {
+                        println!("EX9E: Skip if not key V{}({})", op_code.x, vx);
+                        // TODO
+                    },
+                    _ => panic!("Unimplemented op {:?}", op_code),
+                }
+            },
+            0xFu8 => {
+                match op_code.nn {
+                    0x07u8 => {
+                        println!("FX07: V{} = delay timer({})", op_code.x, self.delay_timer);
+                        self.set_vx(&op_code, self.delay_timer);
+                    },
+                    0x15u8 => {
+                        println!("FX15: delay timer = V{}({})", op_code.x, vx);
+                        self.delay_timer = vx;
+                    },
+                    0x18u8 => {
+                        println!("FX18: sound timer = V{}({})", op_code.x, vx);
+                        self.sound_timer = vx;
+                    },
+                    0x1Eu8 => {
+                        println!("FX1E: I += V{}({})", op_code.x, vx);
+                        self.i += u16::from(vx);
+                    },
+                    0x0Au8 => {
+                        println!("FX0A: Get key");
+                        // TODO
+                    },
+                    0x29u8 => {
+                        println!("FX29: Font at V{}({})", op_code.x, vx);
+                        let character = vx & 0xF;
+                        self.i = 0x50u16 + u16::from(character);
+                    },
+                    0x33u8 => {
+                        println!("FX33: Decimal font of V{}({})", op_code.x, vx);
+                        let digit1 = vx % 10;
+                        let digit2 = (vx % 100) - digit1;
+                        let digit3 = vx - digit2 - digit1;
+                        
+                        self.ram[usize::from(self.i)] = digit3;
+                        self.ram[usize::from(self.i + 1)] = digit2;
+                        self.ram[usize::from(self.i + 2)] = digit1;
+                    },
+                    0x55u8 => {
+                        println!("FX55: Store V0..V{} to I", op_code.x);
+                        for i in 0..usize::from(op_code.x + 1) {
+                            self.v[i] = self.ram[usize::from(self.i) + i];
+                        }
+                    },
+                    0x65u8 => {
+                        println!("FX55: Load V0..V{} from I", op_code.x);
+                        for i in 0..usize::from(op_code.x + 1) {
+                            self.ram[usize::from(self.i) + i] = self.v[i];
+                        }
+                    },
+                    _ => panic!("Unimplemented op {:?}", op_code),
+                }
+            },
             _ => panic!("Unimplemented op {:?}", op_code),
         }
     }
