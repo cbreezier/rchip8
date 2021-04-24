@@ -1,4 +1,3 @@
-use std::io;
 use std::env;
 use std::fs;
 
@@ -79,7 +78,7 @@ struct State {
 
 impl State {
     fn new() -> Self {
-        Self {
+        let mut result = Self {
             display: [[false; 32]; 64],
             ram: [0; 4096],
             pc: 0x200,
@@ -88,7 +87,31 @@ impl State {
             delay_timer: 0,
             sound_timer: 0,
             v: [0; 16],
+        };
+
+        let fonts = [
+            0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+            0x20, 0x60, 0x20, 0x20, 0x70, // 1
+            0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+            0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+            0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+            0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+            0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+            0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+            0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+            0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+            0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+            0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+            0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+            0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+            0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+            0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+        ];
+        for (i, font) in fonts.iter().enumerate() {
+            result.ram[0x50 + i] = *font;
         }
+
+        return result;
     }
 
     fn load_rom(self: &mut State, rom: Vec<u8>) {
@@ -143,10 +166,6 @@ impl State {
 
     fn get_vy(self: &State, op_code: &OpCode) -> u8 {
         return self.v[usize::from(op_code.y)];
-    }
-
-    fn set_vy(self: &mut State, op_code: &OpCode, value: u8) {
-        self.v[usize::from(op_code.y)] = value;
     }
 
     fn set_carry(self: &mut State, value: bool) {
@@ -215,45 +234,51 @@ impl State {
             0x8u8 => {
                 match op_code.n {
                     0x0u8 => { // Set vy
-                        println!("8XN0: V{}({}) = V{}({})", op_code.x, vx, op_code.y, vy);
+                        println!("8XY0: V{}({}) = V{}({})", op_code.x, vx, op_code.y, vy);
                         self.set_vx(&op_code, vy);
                     },
                     0x1u8 => { // OR
-                        println!("8XN1: V{}({}) |= V{}({})", op_code.x, vx, op_code.y, vy);
+                        println!("8XY1: V{}({}) |= V{}({})", op_code.x, vx, op_code.y, vy);
                         self.set_vx(&op_code, vx | vy);
                     },
                     0x2u8 => { // AND
-                        println!("8XN2: V{}({}) &= V{}({})", op_code.x, vx, op_code.y, vy);
+                        println!("8XY2: V{}({}) &= V{}({})", op_code.x, vx, op_code.y, vy);
                         self.set_vx(&op_code, vx & vy);
                     },
                     0x3u8 => { // XOR
-                        println!("8XN3: V{}({}) ^= V{}({})", op_code.x, vx, op_code.y, vy);
+                        println!("8XY3: V{}({}) ^= V{}({})", op_code.x, vx, op_code.y, vy);
                         self.set_vx(&op_code, vx ^ vy);
                     },
                     0x4u8 => { // Add vy
-                        println!("8XN4: V{}({}) += V{}({})", op_code.x, vx, op_code.y, vy);
+                        println!("8XY4: V{}({}) += V{}({})", op_code.x, vx, op_code.y, vy);
                         self.set_vx(&op_code, vx.wrapping_add(vy));
                         self.set_carry(self.get_vx(&op_code) < vx); // Overflowed
                     },
                     0x5u8 => { // Subtract vy
-                        println!("8XN5: V{}({}) -= V{}({})", op_code.x, vx, op_code.y, vy);
+                        println!("8XY5: V{}({}) -= V{}({})", op_code.x, vx, op_code.y, vy);
                         self.set_vx(&op_code, vx.wrapping_sub(vy));
                         self.set_carry(vx > vy);
                     },
                     0x7u8 => { // Subtract from vy
-                        println!("8XN7: V{}({}) = V{}({}) - VX", op_code.x, vx, op_code.y, vy);
+                        println!("8XY7: V{}({}) = V{}({}) - VX", op_code.x, vx, op_code.y, vy);
                         self.set_vx(&op_code, vy.wrapping_sub(vx));
                         self.set_carry(vy > vx);
                     },
                     0x6u8 => { // Shift right
-                        println!("8XN6: V{}({}) = V{}({} >> 1)", op_code.x, vx, op_code.y, vy);
-                        self.set_vx(&op_code, vy >> 1);
-                        self.set_carry(vy & 0b00000001u8 != 0);
+                        // println!("8XY6: V{}({}) = V{}({} >> 1)", op_code.x, vx, op_code.y, vy);
+                        // self.set_vx(&op_code, vy >> 1);
+                        // self.set_carry(vy & 0b00000001u8 != 0);
+                        println!("8XY6: V{}({}) >>= 1", op_code.x, vx);
+                        self.set_vx(&op_code, vx >> 1);
+                        self.set_carry(vx & 0b00000001u8 != 0);
                     },
                     0xEu8 => { // Shift left
-                        println!("8XNE: V{}({}) = V{}({} << 1)", op_code.x, vx, op_code.y, vy);
-                        self.set_vx(&op_code, vy << 1);
-                        self.set_carry(vy & 0b10000000u8 != 0);
+                        // println!("8XYE: V{}({}) = V{}({} << 1)", op_code.x, vx, op_code.y, vy);
+                        // self.set_vx(&op_code, vy << 1);
+                        // self.set_carry(vy & 0b10000000u8 != 0);
+                        println!("8XYE: V{}({}) <<= 1", op_code.x, vx);
+                        self.set_vx(&op_code, vx << 1);
+                        self.set_carry(vx & 0b10000000u8 != 0);
                     },
                     _ => panic!("Unimplemented op {:?}", op_code),
                 }
@@ -347,28 +372,34 @@ impl State {
                     0x29u8 => {
                         println!("FX29: Font at V{}({})", op_code.x, vx);
                         let character = vx & 0xF;
-                        self.i = 0x50u16 + u16::from(character);
+                        self.i = 0x50u16 + (5u16 * u16::from(character));
                     },
                     0x33u8 => {
                         println!("FX33: Decimal font of V{}({})", op_code.x, vx);
-                        let digit1 = vx % 10;
-                        let digit2 = (vx % 100) - digit1;
-                        let digit3 = vx - digit2 - digit1;
+                        let digit3 = vx % 10;
+                        let digit2 = (vx % 100) / 10;
+                        let digit1 = vx / 100;
                         
-                        self.ram[usize::from(self.i)] = digit3;
+                        self.ram[usize::from(self.i)] = digit1;
                         self.ram[usize::from(self.i + 1)] = digit2;
-                        self.ram[usize::from(self.i + 2)] = digit1;
+                        self.ram[usize::from(self.i + 2)] = digit3;
                     },
                     0x55u8 => {
                         println!("FX55: Store V0..V{} to I", op_code.x);
                         for i in 0..usize::from(op_code.x + 1) {
-                            self.v[i] = self.ram[usize::from(self.i) + i];
+                            self.ram[usize::from(self.i) + i] = self.v[i];
+                        }
+                        for i in 0..usize::from(op_code.x + 1) {
+                            println!("    Ram at {} is now {}", usize::from(self.i) + i, self.ram[usize::from(self.i) + i]);
                         }
                     },
                     0x65u8 => {
-                        println!("FX55: Load V0..V{} from I", op_code.x);
+                        println!("FX65: Load V0..V{} from I", op_code.x);
                         for i in 0..usize::from(op_code.x + 1) {
-                            self.ram[usize::from(self.i) + i] = self.v[i];
+                            self.v[i] = self.ram[usize::from(self.i) + i];
+                        }
+                        for i in 0..usize::from(op_code.x + 1) {
+                            println!("    Loaded {} into V{}", self.v[i], i);
                         }
                     },
                     _ => panic!("Unimplemented op {:?}", op_code),
@@ -407,7 +438,7 @@ fn main() {
         // The rest of the game loop goes here...
         let op_code = state.next_op();
         state.execute_op(&mut display, op_code);
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 5)); // 5fps
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 10)); // 10fps
 
         // let mut input = String::new();
         // io::stdin()
