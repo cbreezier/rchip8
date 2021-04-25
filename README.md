@@ -21,7 +21,7 @@ z x c v
 
 Apologies to anyone with a non-QWERTY keyboard...
 
-<Esc> to quit.
+`<Esc>` to quit.
 
 ## Credits
 I followed the fantastic write-up at https://tobiasvl.github.io/blog/write-a-chip-8-emulator/
